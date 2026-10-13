@@ -67,3 +67,12 @@ test('an account\'s transfers list those in and out, newest first', async () => 
   b.createdAt = '2026-01-02T00:00:00.000Z'
   assert.deepEqual(transfersFor(store, from.id).map((t) => t.id), [b.id, a.id])
 })
+
+test('a memo with a control character is refused', async () => {
+  const { store, member, from, to } = await funded()
+  try {
+    transfer(store, member, { fromId: from.id, toId: to.id, amountCents: 1, memo: 'rent\u0000' })
+  } catch (err) {
+    assert.match(err.message, /control/)
+  }
+})

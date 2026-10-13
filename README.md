@@ -43,7 +43,8 @@ An account that is not the caller's reads as absent (404), not forbidden.
 ## Rules
 
 - Amounts are whole cents, always positive; the two sides of a transfer share a currency.
-- A memo is at most 140 characters.
+- A memo is one line of at most 140 characters. A memo with a control character in it
+  is refused with 400.
 - Every write is audited under the user who made it. A job the service runs on its own
   records `system`, never a person who did not act.
 - A closed account takes no money in or out, and only an empty account closes.
