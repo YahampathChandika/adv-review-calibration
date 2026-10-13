@@ -1,4 +1,7 @@
 /**
+ * Roles: `member` (own accounts), `admin` (plus deposits), `accountant` (reads
+ * every account's statement, changes nothing).
+ *
  * Bearer tokens. Every request to the API carries `Authorization: Bearer <token>`,
  * which names a user in the store. The token is the only credential; it is
  * never logged.

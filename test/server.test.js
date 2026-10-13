@@ -75,3 +75,17 @@ test('an export lands under the export directory, named for the account only', a
     await close()
   }
 })
+
+test('an accountant reads any account and its transfers', async () => {
+  const { dir, store } = await freshStore()
+  store.insert('users', { id: 'usr_eve', name: 'Eve', token: 'tok-eve', role: 'accountant', createdAt: 'now' })
+  const { call, close } = await serve(store, dir)
+  try {
+    const a = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'A' } })
+    assert.equal((await call('GET', `/accounts/${a.body.id}`, { token: 'tok-eve' })).status, 200)
+    assert.equal((await call('GET', `/accounts/${a.body.id}/transfers`, { token: 'tok-eve' })).status, 200)
+    assert.equal((await call('GET', `/accounts/${a.body.id}`, { token: 'tok-cy' })).status, 404, 'a member still sees only their own')
+  } finally {
+    await close()
+  }
+})

@@ -34,9 +34,14 @@ export function listAccounts(store, { ownerId, page = 1 }) {
   return { page, pageSize: PAGE_SIZE, total: mine.length, items: mine.slice(start, start + PAGE_SIZE) }
 }
 
+/** Whether the user may see this account: their own, or any account for an accountant. */
+export function canSee(user, account) {
+  return account.ownerId === user.id || user.role === 'accountant'
+}
+
 export function getOwnAccount(store, user, id) {
   const account = store.get('accounts', id)
-  if (!account || account.ownerId !== user.id) throw new HttpError(404, 'no such account')
+  if (!account || !canSee(user, account)) throw new HttpError(404, 'no such account')
   return account
 }
 
