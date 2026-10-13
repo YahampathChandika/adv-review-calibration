@@ -6,7 +6,7 @@ import { HttpError, requireRole, requireUser } from './auth.js'
 import { exportTransfers } from './export.js'
 import { publicAccount, publicPage, publicTransfer } from './serialize.js'
 import { Store } from './store.js'
-import { deposit, transfer, transfersFor } from './transfers.js'
+import { deposit, summary, transfer, transfersFor, withdraw } from './transfers.js'
 
 const MAX_BODY = 64 * 1024
 
@@ -94,6 +94,16 @@ const routes = [
       return created(publicAccount(account))
     }),
   ],
+  [
+    'POST',
+    /^\/withdrawals$/,
+    requireRole('admin', async ({ store, user, body }) => {
+      const account = withdraw(store, user, body)
+      await store.save()
+      return created(publicAccount(account))
+    }),
+  ],
+  ['GET', /^\/summary$/, requireRole('admin', async ({ store }) => summary(store))],
   [
     'POST',
     /^\/accounts\/([^/]+)\/export$/,
