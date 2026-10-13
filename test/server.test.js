@@ -75,3 +75,21 @@ test('an export lands under the export directory, named for the account only', a
     await close()
   }
 })
+
+test('an account\'s audit trail lists its own events and its transfers, oldest first, to its owner only', async () => {
+  const { dir, store } = await freshStore()
+  const { call, close } = await serve(store, dir)
+  try {
+    const a = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'A' } })
+    const b = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'B' } })
+    await call('POST', '/deposits', { token: 'tok-ada', body: { accountId: a.body.id, amountCents: 100 } })
+    await call('POST', '/transfers', { token: 'tok-bob', body: { fromId: a.body.id, toId: b.body.id, amountCents: 1 } })
+    const trail = await call('GET', `/accounts/${a.body.id}/audit`, { token: 'tok-bob' })
+    assert.equal(trail.status, 200)
+    assert.deepEqual(trail.body.map((e) => e.action), ['account.open', 'deposit', 'transfer'])
+    assert.deepEqual(Object.keys(trail.body[0]).sort(), ['action', 'at'])
+    assert.equal((await call('GET', `/accounts/${a.body.id}/audit`, { token: 'tok-cy' })).status, 404)
+  } finally {
+    await close()
+  }
+})
