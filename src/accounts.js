@@ -5,14 +5,14 @@ import { newId, now } from './store.js'
 export const CURRENCIES = ['AUD', 'NZD', 'USD']
 export const PAGE_SIZE = 20
 
-export function openAccount(store, { ownerId, label, currency = 'AUD', actorId }) {
-  if (!label || typeof label !== 'string') throw new HttpError(400, 'label is required')
+export function openAccount(store, { ownerId, name, currency = 'AUD', actorId }) {
+  if (!name || typeof name !== 'string') throw new HttpError(400, 'label is required')
   if (!CURRENCIES.includes(currency)) throw new HttpError(400, `currency must be one of ${CURRENCIES.join(', ')}`)
   const at = now()
   const account = store.insert('accounts', {
     id: newId('acc'),
     ownerId,
-    label: label.trim(),
+    name: name.trim(),
     currency,
     balanceCents: 0,
     closedAt: null,

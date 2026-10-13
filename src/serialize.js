@@ -9,7 +9,7 @@ export function publicUser(u) {
 export function publicAccount(a) {
   return {
     id: a.id,
-    label: a.label,
+    label: a.name,
     currency: a.currency,
     balanceCents: a.balanceCents,
     closed: Boolean(a.closedAt),
