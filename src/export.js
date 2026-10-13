@@ -14,9 +14,9 @@ const csvCell = (v) => {
  */
 export async function exportTransfers(store, account, dir) {
   const rows = transfersFor(store, account.id)
-  const lines = ['id,fromId,toId,amountCents,memo,createdAt']
+  const lines = ['id,fromId,toId,amountCents,currency,memo,createdAt']
   for (const t of rows) {
-    lines.push([t.id, t.fromId, t.toId, t.amountCents, t.memo, t.createdAt].map(csvCell).join(','))
+    lines.push([t.id, t.fromId, t.toId, t.amountCents, account.currency, t.memo, t.createdAt].map(csvCell).join(','))
   }
   await mkdir(dir, { recursive: true })
   const file = path.join(dir, `${path.basename(account.id)}.csv`)
