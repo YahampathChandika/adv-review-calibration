@@ -1,7 +1,7 @@
 import http from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { closeAccount, getOwnAccount, listAccounts, openAccount } from './accounts.js'
+import { closeAccount, getOwnAccount, listAccounts, openAccount, setOverdraft } from './accounts.js'
 import { HttpError, requireRole, requireUser } from './auth.js'
 import { exportTransfers } from './export.js'
 import { publicAccount, publicPage, publicTransfer } from './serialize.js'
@@ -83,6 +83,15 @@ const routes = [
       const row = transfer(store, user, body)
       await store.save()
       return created(publicTransfer(row))
+    }),
+  ],
+  [
+    'POST',
+    /^\/accounts\/([^/]+)\/overdraft$/,
+    requireRole('admin', async ({ store, user, params, body }) => {
+      const account = setOverdraft(store, user, { accountId: params[0], overdraftCents: body.overdraftCents })
+      await store.save()
+      return publicAccount(account)
     }),
   ],
   [
