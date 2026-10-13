@@ -20,6 +20,7 @@ user in the ledger file.
 | :- | :- |
 | `member` | open, read, close and export their own accounts; transfer between them |
 | `admin` | everything a member may, plus deposits into any account |
+| `accountant` | read any account and its transfers; change nothing |
 
 ## API
 
