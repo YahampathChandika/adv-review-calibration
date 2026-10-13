@@ -65,5 +65,15 @@ test('an account\'s transfers list those in and out, newest first', async () => 
   a.createdAt = '2026-01-01T00:00:00.000Z'
   const b = transfer(store, member, { fromId: to.id, toId: from.id, amountCents: 5 })
   b.createdAt = '2026-01-02T00:00:00.000Z'
-  assert.deepEqual(transfersFor(store, from.id).map((t) => t.id), [b.id, a.id])
+  assert.deepEqual(transfersFor(store, from.id).items.map((t) => t.id), [b.id, a.id])
+})
+
+test('the history is paged from page 1', async () => {
+  const { store, member, from, to } = await funded(100)
+  for (let i = 0; i < 3; i++) transfer(store, member, { fromId: from.id, toId: to.id, amountCents: 1 })
+  const first = transfersFor(store, from.id, { page: 1 })
+  assert.equal(first.total, 3)
+  assert.equal(first.items.length, 3)
+  assert.equal(transfersFor(store, from.id, { page: 2 }).items.length, 0)
+  assert.throws(() => transfersFor(store, from.id, { page: 0 }), /page must be/)
 })

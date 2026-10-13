@@ -71,9 +71,10 @@ const routes = [
   [
     'GET',
     /^\/accounts\/([^/]+)\/transfers$/,
-    requireUser(async ({ store, user, params }) => {
+    requireUser(async ({ store, user, params, url }) => {
       const account = getOwnAccount(store, user, params[0])
-      return transfersFor(store, account.id).map(publicTransfer)
+      const page = url.searchParams.has('page') ? Number(url.searchParams.get('page')) : 1
+      return publicPage(transfersFor(store, account.id, { page }), publicTransfer)
     }),
   ],
   [

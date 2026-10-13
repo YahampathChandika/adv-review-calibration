@@ -1,3 +1,4 @@
+import { PAGE_SIZE } from './accounts.js'
 import { HttpError } from './auth.js'
 import { record } from './audit.js'
 import { newId, now } from './store.js'
@@ -52,10 +53,19 @@ export function deposit(store, admin, { accountId, amountCents }) {
   return updated
 }
 
-/** Transfers in or out of one account, newest first. */
-export function transfersFor(store, accountId) {
+/** Every transfer in or out of one account, newest first. */
+export function allTransfersFor(store, accountId) {
   return store
     .all('transfers')
     .filter((t) => t.fromId === accountId || t.toId === accountId)
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+}
+
+/** One page of an account's transfers, newest first. Pages start at 1. */
+export function transfersFor(store, accountId, { page = 1 } = {}) {
+  if (!Number.isInteger(page) || page < 1) throw new HttpError(400, 'page must be a whole number from 1')
+  const all = allTransfersFor(store, accountId)
+  const start = (page - 1) * PAGE_SIZE
+  const end = start + PAGE_SIZE - 1
+  return { page, pageSize: PAGE_SIZE, total: all.length, items: all.slice(start, end) }
 }
