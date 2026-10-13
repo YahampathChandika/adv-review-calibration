@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { openAccount } from '../src/accounts.js'
 import { entriesFor } from '../src/audit.js'
-import { MAX_MEMO, deposit, transfer, transfersFor } from '../src/transfers.js'
+import { MAX_MEMO, canCover, deposit, transfer, transfersFor } from '../src/transfers.js'
 import { freshStore } from './helpers.js'
 
 async function funded(cents = 1000) {
@@ -66,4 +66,11 @@ test('an account\'s transfers list those in and out, newest first', async () => 
   const b = transfer(store, member, { fromId: to.id, toId: from.id, amountCents: 5 })
   b.createdAt = '2026-01-02T00:00:00.000Z'
   assert.deepEqual(transfersFor(store, from.id).map((t) => t.id), [b.id, a.id])
+})
+
+test('an overdraft limit covers what the balance does not', () => {
+  assert.equal(canCover({ balanceCents: 0, overdraftCents: 500 }, 300), true)
+  assert.equal(canCover({ balanceCents: 0, overdraftCents: 500 }, 501), false)
+  assert.equal(canCover({ balanceCents: 10 }, 11), false)
+  assert.equal(canCover({ balanceCents: 10 }, 10), true)
 })

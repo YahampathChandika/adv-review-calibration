@@ -4,6 +4,11 @@ import { newId, now } from './store.js'
 
 export const MAX_MEMO = 140
 
+/** Whether `from` can part with `amountCents`: its balance plus its overdraft limit covers it. */
+export function canCover(from, amountCents) {
+  return from.balanceCents + (from.overdraftCents ?? 0) >= amountCents
+}
+
 /**
  * Move money between two of the caller's accounts. One statement: both
  * balances and the transfer row change together, or nothing does.
@@ -20,7 +25,7 @@ export function transfer(store, user, { fromId, toId, amountCents, memo }) {
   if (!to || to.ownerId !== user.id) throw new HttpError(404, 'no such account')
   if (from.closedAt || to.closedAt) throw new HttpError(409, 'a closed account cannot transfer')
   if (from.currency !== to.currency) throw new HttpError(409, 'accounts must share a currency')
-  if (from.balanceCents < amountCents) throw new HttpError(409, 'insufficient funds')
+  if (!canCover(from, amountCents)) throw new HttpError(409, 'insufficient funds')
 
   const at = now()
   store.update('accounts', fromId, { balanceCents: from.balanceCents - amountCents, updatedAt: at })

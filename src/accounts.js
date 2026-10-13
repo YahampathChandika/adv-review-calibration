@@ -15,6 +15,7 @@ export function openAccount(store, { ownerId, label, currency = 'AUD', actorId }
     label: label.trim(),
     currency,
     balanceCents: 0,
+    overdraftCents: 0,
     closedAt: null,
     createdAt: at,
     updatedAt: at,
@@ -47,4 +48,15 @@ export function closeAccount(store, user, id) {
   const closed = store.update('accounts', id, { closedAt: now(), updatedAt: now() })
   record(store, user.id, 'account.close', id)
   return closed
+}
+
+/** Set how far below zero an account may go. Administrators only. */
+export function setOverdraft(store, admin, { accountId, overdraftCents }) {
+  if (!Number.isInteger(overdraftCents) || overdraftCents < 0) throw new HttpError(400, 'overdraftCents must be a whole number from 0')
+  const account = store.get('accounts', accountId)
+  if (!account) throw new HttpError(404, 'no such account')
+  if (account.closedAt) throw new HttpError(409, 'already closed')
+  const updated = store.update('accounts', accountId, { overdraftCents, updatedAt: now() })
+  record(store, admin.id, 'account.overdraft', accountId)
+  return updated
 }

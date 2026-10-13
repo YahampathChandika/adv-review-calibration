@@ -25,7 +25,7 @@ test('open, deposit, transfer and read back, through HTTP, with only public fiel
     const a = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'A' } })
     const b = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'B', currency: 'AUD' } })
     assert.equal(a.status, 201)
-    assert.deepEqual(Object.keys(a.body).sort(), ['balanceCents', 'closed', 'createdAt', 'currency', 'id', 'label'])
+    assert.deepEqual(Object.keys(a.body).sort(), ['balanceCents', 'closed', 'createdAt', 'currency', 'id', 'label', 'overdraftCents'])
     assert.equal((await call('POST', '/deposits', { token: 'tok-bob', body: { accountId: a.body.id, amountCents: 500 } })).status, 403)
     assert.equal((await call('POST', '/deposits', { token: 'tok-ada', body: { accountId: a.body.id, amountCents: 500 } })).status, 201)
     const t = await call('POST', '/transfers', { token: 'tok-bob', body: { fromId: a.body.id, toId: b.body.id, amountCents: 200, memo: 'm' } })
@@ -71,6 +71,19 @@ test('an export lands under the export directory, named for the account only', a
     const csv = await readFile(path.join(dir, 'exports', `${a.body.id}.csv`), 'utf8')
     assert.equal(csv.split('\n')[0], 'id,fromId,toId,amountCents,memo,createdAt')
     assert.equal((await call('POST', '/accounts/../../etc/export', { token: 'tok-bob' })).status, 404)
+  } finally {
+    await close()
+  }
+})
+
+test('only an administrator sets an overdraft limit', async () => {
+  const { dir, store } = await freshStore()
+  const { call, close } = await serve(store, dir)
+  try {
+    const a = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'A' } })
+    assert.equal((await call('POST', `/accounts/${a.body.id}/overdraft`, { token: 'tok-bob', body: { overdraftCents: 500 } })).status, 403)
+    assert.equal((await call('POST', `/accounts/${a.body.id}/overdraft`, { token: 'tok-ada', body: { overdraftCents: -1 } })).status, 400)
+    assert.equal((await call('POST', `/accounts/${a.body.id}/overdraft`, { token: 'tok-ada', body: { overdraftCents: 500 } })).status, 200)
   } finally {
     await close()
   }

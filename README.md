@@ -36,6 +36,7 @@ unexpected failure is a 500 that says nothing about itself.
 | GET | `/accounts/:id/transfers` | owner | the account's transfers, newest first |
 | POST | `/accounts/:id/export` | owner | write the account's transfers as CSV under `exports/` |
 | POST | `/transfers` | owner of both | `{ fromId, toId, amountCents, memo? }` |
+| POST | `/accounts/:id/overdraft` | admin | `{ overdraftCents }`: how far below zero the account may go |
 | POST | `/deposits` | admin | `{ accountId, amountCents }` |
 
 An account that is not the caller's reads as absent (404), not forbidden.
@@ -43,6 +44,8 @@ An account that is not the caller's reads as absent (404), not forbidden.
 ## Rules
 
 - Amounts are whole cents, always positive; the two sides of a transfer share a currency.
+- A transfer may take an account below zero by at most its overdraft limit, 0 unless an
+  administrator sets one.
 - A memo is at most 140 characters.
 - Every write is audited under the user who made it. A job the service runs on its own
   records `system`, never a person who did not act.

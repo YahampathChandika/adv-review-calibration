@@ -12,6 +12,7 @@ export function publicAccount(a) {
     label: a.label,
     currency: a.currency,
     balanceCents: a.balanceCents,
+    overdraftCents: a.overdraftCents ?? 0,
     closed: Boolean(a.closedAt),
     createdAt: a.createdAt,
   }
