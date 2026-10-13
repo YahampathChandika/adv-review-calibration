@@ -69,8 +69,25 @@ test('an export lands under the export directory, named for the account only', a
     const res = await call('POST', `/accounts/${a.body.id}/export`, { token: 'tok-bob' })
     assert.equal(res.status, 200)
     const csv = await readFile(path.join(dir, 'exports', `${a.body.id}.csv`), 'utf8')
-    assert.equal(csv.split('\n')[0], 'id,fromId,toId,amountCents,memo,createdAt')
+    assert.equal(csv.split('\n')[0], 'id,fromId,toId,amountCents,currency,memo,createdAt')
     assert.equal((await call('POST', '/accounts/../../etc/export', { token: 'tok-bob' })).status, 404)
+  } finally {
+    await close()
+  }
+})
+
+test('each exported row carries the account\'s currency', async () => {
+  const { dir, store } = await freshStore()
+  const { call, close } = await serve(store, dir)
+  try {
+    const a = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'A', currency: 'NZD' } })
+    const b = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'B', currency: 'NZD' } })
+    await call('POST', '/deposits', { token: 'tok-ada', body: { accountId: a.body.id, amountCents: 100 } })
+    await call('POST', '/transfers', { token: 'tok-bob', body: { fromId: a.body.id, toId: b.body.id, amountCents: 1, memo: 'a "b", c' } })
+    await call('POST', `/accounts/${a.body.id}/export`, { token: 'tok-bob' })
+    const [header, row] = (await readFile(path.join(dir, 'exports', `${a.body.id}.csv`), 'utf8')).split('\n')
+    assert.equal(header.split(',')[4], 'currency')
+    assert.match(row, /,1,NZD,"a ""b"", c",/)
   } finally {
     await close()
   }
