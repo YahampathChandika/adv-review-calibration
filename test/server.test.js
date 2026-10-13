@@ -71,6 +71,10 @@ test('an export lands under the export directory, named for the account only', a
     const csv = await readFile(path.join(dir, 'exports', `${a.body.id}.csv`), 'utf8')
     assert.equal(csv.split('\n')[0], 'id,fromId,toId,amountCents,memo,createdAt')
     assert.equal((await call('POST', '/accounts/../../etc/export', { token: 'tok-bob' })).status, 404)
+    const named = await call('POST', `/accounts/${a.body.id}/export`, { token: 'tok-bob', body: { name: 'statement-2026' } })
+    assert.deepEqual(named.body, { exported: 0, file: 'statement-2026.csv' })
+    await readFile(path.join(dir, 'exports', 'statement-2026.csv'), 'utf8')
+    assert.equal((await call('POST', `/accounts/${a.body.id}/export`, { token: 'tok-bob', body: { name: 'x'.repeat(65) } })).status, 400)
   } finally {
     await close()
   }

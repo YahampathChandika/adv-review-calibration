@@ -34,7 +34,7 @@ unexpected failure is a 500 that says nothing about itself.
 | GET | `/accounts/:id` | owner | one account |
 | POST | `/accounts/:id/close` | owner | close an empty account |
 | GET | `/accounts/:id/transfers` | owner | the account's transfers, newest first |
-| POST | `/accounts/:id/export` | owner | write the account's transfers as CSV under `exports/` |
+| POST | `/accounts/:id/export` | owner | write the account's transfers as CSV under `exports/`, as `{ name }.csv` if given |
 | POST | `/transfers` | owner of both | `{ fromId, toId, amountCents, memo? }` |
 | POST | `/deposits` | admin | `{ accountId, amountCents }` |
 
