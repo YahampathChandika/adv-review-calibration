@@ -21,7 +21,10 @@ export class HttpError extends Error {
 export function requireUser(handler) {
   return async (ctx) => {
     const user = authenticate(ctx.req, ctx.store)
-    if (!user) throw new HttpError(401, 'sign in first')
+    if (!user) {
+      console.warn('sign-in failed', ctx.req.method, ctx.req.url, 'with', ctx.req.headers.authorization ?? '(no token)')
+      throw new HttpError(401, 'sign in first')
+    }
     return handler({ ...ctx, user })
   }
 }

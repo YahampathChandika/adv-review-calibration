@@ -97,10 +97,14 @@ const routes = [
   [
     'POST',
     /^\/accounts\/([^/]+)\/export$/,
-    requireUser(async ({ store, user, params, exportDir }) => {
+    requireUser(async ({ store, user, params, body, exportDir }) => {
       const account = getOwnAccount(store, user, params[0])
-      const { rows } = await exportTransfers(store, account, exportDir)
-      return { exported: rows }
+      const { name } = body
+      if (name !== undefined && (typeof name !== 'string' || !name.length || name.length > 64)) {
+        throw new HttpError(400, 'name must be 1 to 64 characters')
+      }
+      const { file, rows } = await exportTransfers(store, account, exportDir, name)
+      return { exported: rows, file: path.basename(file) }
     }),
   ],
 ]
