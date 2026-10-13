@@ -3,6 +3,8 @@ import { record } from './audit.js'
 import { newId, now } from './store.js'
 
 export const MAX_MEMO = 140
+// A memo is one printable line: no control characters.
+const CONTROL = /[\x00-\x1f\x7f]/g
 
 /**
  * Move money between two of the caller's accounts. One statement: both
@@ -11,8 +13,11 @@ export const MAX_MEMO = 140
 export function transfer(store, user, { fromId, toId, amountCents, memo }) {
   if (!Number.isInteger(amountCents) || amountCents <= 0) throw new HttpError(400, 'amountCents must be a positive whole number')
   if (fromId === toId) throw new HttpError(400, 'from and to must differ')
-  if (memo !== undefined && (typeof memo !== 'string' || memo.length > MAX_MEMO)) {
-    throw new HttpError(400, `memo must be a string of at most ${MAX_MEMO} characters`)
+  if (memo !== undefined) {
+    if (typeof memo !== 'string' || memo.length > MAX_MEMO) {
+      throw new HttpError(400, `memo must be a string of at most ${MAX_MEMO} characters`)
+    }
+    memo = memo.replace(CONTROL, '')
   }
   const from = store.get('accounts', fromId)
   const to = store.get('accounts', toId)
