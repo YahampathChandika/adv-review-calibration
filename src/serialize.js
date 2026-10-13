@@ -31,3 +31,7 @@ export function publicTransfer(t) {
 export function publicPage(page, map) {
   return { ...page, items: page.items.map(map) }
 }
+
+export function publicAuditEntry(e) {
+  return { action: e.action, at: e.at }
+}

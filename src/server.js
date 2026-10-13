@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { closeAccount, getOwnAccount, listAccounts, openAccount } from './accounts.js'
 import { HttpError, requireRole, requireUser } from './auth.js'
 import { exportTransfers } from './export.js'
-import { publicAccount, publicPage, publicTransfer } from './serialize.js'
+import { publicAccount, publicAuditEntry, publicPage, publicTransfer } from './serialize.js'
 import { Store } from './store.js'
 import { deposit, transfer, transfersFor } from './transfers.js'
 
@@ -74,6 +74,19 @@ const routes = [
     requireUser(async ({ store, user, params }) => {
       const account = getOwnAccount(store, user, params[0])
       return transfersFor(store, account.id).map(publicTransfer)
+    }),
+  ],
+  [
+    'GET',
+    /^\/accounts\/([^/]+)\/audit$/,
+    requireUser(async ({ store, user, params }) => {
+      const account = getOwnAccount(store, user, params[0])
+      const own = transfersFor(store, account.id).map((t) => t.id)
+      const targets = new Set([account.id, ...own])
+      return store
+        .all('audit')
+        .filter((e) => targets.has(e.target))
+        .map(publicAuditEntry)
     }),
   ],
   [
