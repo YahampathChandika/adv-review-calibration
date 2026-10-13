@@ -38,6 +38,17 @@ export function transfer(store, user, { fromId, toId, amountCents, memo }) {
   return row
 }
 
+function bumpTotal(store, currency, deltaCents) {
+  const row = store.get('totals', currency)
+  if (row) store.update('totals', currency, { cents: row.cents + deltaCents })
+  else store.insert('totals', { id: currency, cents: deltaCents })
+}
+
+/** Money held per currency, from the running totals. */
+export function summary(store) {
+  return Object.fromEntries(store.all('totals').map((t) => [t.id, t.cents]))
+}
+
 /** Money arriving from outside the ledger (a deposit). Administrators only. */
 export function deposit(store, admin, { accountId, amountCents }) {
   if (!Number.isInteger(amountCents) || amountCents <= 0) throw new HttpError(400, 'amountCents must be a positive whole number')
@@ -48,7 +59,23 @@ export function deposit(store, admin, { accountId, amountCents }) {
     balanceCents: account.balanceCents + amountCents,
     updatedAt: now(),
   })
+  bumpTotal(store, account.currency, amountCents)
   record(store, admin.id, 'deposit', accountId)
+  return updated
+}
+
+/** Money leaving the ledger (a withdrawal). Administrators only. */
+export function withdraw(store, admin, { accountId, amountCents }) {
+  if (!Number.isInteger(amountCents) || amountCents <= 0) throw new HttpError(400, 'amountCents must be a positive whole number')
+  const account = store.get('accounts', accountId)
+  if (!account) throw new HttpError(404, 'no such account')
+  if (account.closedAt) throw new HttpError(409, 'a closed account cannot pay out')
+  if (account.balanceCents < amountCents) throw new HttpError(409, 'insufficient funds')
+  const updated = store.update('accounts', accountId, {
+    balanceCents: account.balanceCents - amountCents,
+    updatedAt: now(),
+  })
+  record(store, admin.id, 'withdrawal', accountId)
   return updated
 }
 

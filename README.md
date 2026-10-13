@@ -36,7 +36,9 @@ unexpected failure is a 500 that says nothing about itself.
 | GET | `/accounts/:id/transfers` | owner | the account's transfers, newest first |
 | POST | `/accounts/:id/export` | owner | write the account's transfers as CSV under `exports/` |
 | POST | `/transfers` | owner of both | `{ fromId, toId, amountCents, memo? }` |
-| POST | `/deposits` | admin | `{ accountId, amountCents }` |
+| POST | `/deposits` | admin | `{ accountId, amountCents }`: money arriving from outside |
+| POST | `/withdrawals` | admin | `{ accountId, amountCents }`: money leaving |
+| GET | `/summary` | admin | money held per currency, e.g. `{ "AUD": 12500 }` |
 
 An account that is not the caller's reads as absent (404), not forbidden.
 

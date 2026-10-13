@@ -2,7 +2,7 @@ import assert from 'node:assert/strict'
 import { test } from 'node:test'
 import { openAccount } from '../src/accounts.js'
 import { entriesFor } from '../src/audit.js'
-import { MAX_MEMO, deposit, transfer, transfersFor } from '../src/transfers.js'
+import { MAX_MEMO, deposit, summary, transfer, transfersFor, withdraw } from '../src/transfers.js'
 import { freshStore } from './helpers.js'
 
 async function funded(cents = 1000) {
@@ -66,4 +66,15 @@ test('an account\'s transfers list those in and out, newest first', async () => 
   const b = transfer(store, member, { fromId: to.id, toId: from.id, amountCents: 5 })
   b.createdAt = '2026-01-02T00:00:00.000Z'
   assert.deepEqual(transfersFor(store, from.id).map((t) => t.id), [b.id, a.id])
+})
+
+test('a deposit raises the currency\'s total; a withdrawal lowers the balance and never overdraws', async () => {
+  const { store, admin, member } = await freshStore()
+  const account = openAccount(store, { ownerId: member.id, label: 'A', actorId: member.id })
+  deposit(store, admin, { accountId: account.id, amountCents: 50 })
+  assert.deepEqual(summary(store), { AUD: 50 })
+  assert.throws(() => withdraw(store, admin, { accountId: account.id, amountCents: 51 }), /insufficient funds/)
+  withdraw(store, admin, { accountId: account.id, amountCents: 20 })
+  assert.equal(store.get('accounts', account.id).balanceCents, 30)
+  assert.deepEqual(entriesFor(store, account.id).map((e) => e.action), ['account.open', 'deposit', 'withdrawal'])
 })

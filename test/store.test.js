@@ -27,18 +27,19 @@ test('a save round-trips through the file, and migrations run once', async () =>
   await store.save()
   const again = await Store.open(path.join(dir, 'ledger.json'))
   assert.equal(again.get('accounts', 'acc_1').balanceCents, 5)
-  assert.equal(again.data.version, 2)
+  assert.equal(again.data.version, 3)
   assert.deepEqual(await again.migrate(MIGRATIONS), [])
 })
 
 test('migration 002 gives every account a currency, and only those without one', async () => {
   const store = new Store(path.join(process.cwd(), 'never-written.json'))
-  store.data.accounts.push({ id: 'a', ownerId: 'u' }, { id: 'b', ownerId: 'u', currency: 'NZD' })
+  store.data.accounts.push({ id: 'a', ownerId: 'u', balanceCents: 5 }, { id: 'b', ownerId: 'u', currency: 'NZD', balanceCents: 7 })
   store.save = async () => {}
   const applied = await store.migrate(MIGRATIONS)
-  assert.deepEqual(applied, ['001-init.js', '002-account-currency.js'])
+  assert.deepEqual(applied, ['001-init.js', '002-account-currency.js', '003-totals.js'])
   assert.equal(store.get('accounts', 'a').currency, 'AUD')
   assert.equal(store.get('accounts', 'b').currency, 'NZD')
+  assert.deepEqual(store.all('totals'), [{ id: 'AUD', cents: 5 }, { id: 'NZD', cents: 7 }])
 })
 
 test('update replaces the row with the schema applied, and rejects an unknown id', async () => {
@@ -54,5 +55,5 @@ test('the file on disk is whole JSON after a save', async () => {
   const { dir, store } = await freshStore()
   await store.save()
   const raw = await readFile(path.join(dir, 'ledger.json'), 'utf8')
-  assert.equal(JSON.parse(raw).version, 2)
+  assert.equal(JSON.parse(raw).version, 3)
 })

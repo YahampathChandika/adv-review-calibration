@@ -75,3 +75,19 @@ test('an export lands under the export directory, named for the account only', a
     await close()
   }
 })
+
+test('the summary is for administrators and follows deposits', async () => {
+  const { dir, store } = await freshStore()
+  const { call, close } = await serve(store, dir)
+  try {
+    const a = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'A' } })
+    assert.equal((await call('GET', '/summary', { token: 'tok-bob' })).status, 403)
+    assert.deepEqual((await call('GET', '/summary', { token: 'tok-ada' })).body, {})
+    await call('POST', '/deposits', { token: 'tok-ada', body: { accountId: a.body.id, amountCents: 125 } })
+    assert.deepEqual((await call('GET', '/summary', { token: 'tok-ada' })).body, { AUD: 125 })
+    assert.equal((await call('POST', '/withdrawals', { token: 'tok-ada', body: { accountId: a.body.id, amountCents: 25 } })).status, 201)
+    assert.equal((await call('GET', `/accounts/${a.body.id}`, { token: 'tok-bob' })).body.balanceCents, 100)
+  } finally {
+    await close()
+  }
+})
