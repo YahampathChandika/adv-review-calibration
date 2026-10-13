@@ -33,3 +33,11 @@ export function requireRole(role, handler) {
     return handler(ctx)
   })
 }
+
+/** The user an administrator acts for. Anyone else acts only for themselves. */
+export function actingFor(store, user, userId) {
+  if (user.role !== 'admin') throw new HttpError(403, 'admin only')
+  const other = store.get('users', userId)
+  if (!other) throw new HttpError(404, 'no such user')
+  return other
+}

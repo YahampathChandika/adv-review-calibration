@@ -75,3 +75,20 @@ test('an export lands under the export directory, named for the account only', a
     await close()
   }
 })
+
+test('an administrator transfers on a member\'s behalf; a member cannot', async () => {
+  const { dir, store, member } = await freshStore()
+  const { call, close } = await serve(store, dir)
+  try {
+    const a = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'A' } })
+    const b = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'B' } })
+    await call('POST', '/deposits', { token: 'tok-ada', body: { accountId: a.body.id, amountCents: 100 } })
+    const move = { fromId: a.body.id, toId: b.body.id, amountCents: 40, onBehalfOf: member.id }
+    assert.equal((await call('POST', '/transfers', { token: 'tok-cy', body: move })).status, 403)
+    assert.equal((await call('POST', '/transfers', { token: 'tok-ada', body: { ...move, onBehalfOf: 'usr_nobody' } })).status, 404)
+    assert.equal((await call('POST', '/transfers', { token: 'tok-ada', body: move })).status, 201)
+    assert.equal((await call('GET', `/accounts/${b.body.id}`, { token: 'tok-bob' })).body.balanceCents, 40)
+  } finally {
+    await close()
+  }
+})

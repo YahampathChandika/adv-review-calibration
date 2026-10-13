@@ -2,7 +2,7 @@ import http from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { closeAccount, getOwnAccount, listAccounts, openAccount } from './accounts.js'
-import { HttpError, requireRole, requireUser } from './auth.js'
+import { HttpError, actingFor, requireRole, requireUser } from './auth.js'
 import { exportTransfers } from './export.js'
 import { publicAccount, publicPage, publicTransfer } from './serialize.js'
 import { Store } from './store.js'
@@ -80,7 +80,8 @@ const routes = [
     'POST',
     /^\/transfers$/,
     requireUser(async ({ store, user, body }) => {
-      const row = transfer(store, user, body)
+      const owner = body.onBehalfOf === undefined ? user : actingFor(store, user, body.onBehalfOf)
+      const row = transfer(store, owner, body)
       await store.save()
       return created(publicTransfer(row))
     }),

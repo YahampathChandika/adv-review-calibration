@@ -35,7 +35,7 @@ unexpected failure is a 500 that says nothing about itself.
 | POST | `/accounts/:id/close` | owner | close an empty account |
 | GET | `/accounts/:id/transfers` | owner | the account's transfers, newest first |
 | POST | `/accounts/:id/export` | owner | write the account's transfers as CSV under `exports/` |
-| POST | `/transfers` | owner of both | `{ fromId, toId, amountCents, memo? }` |
+| POST | `/transfers` | owner of both | `{ fromId, toId, amountCents, memo? }`; an admin adds `onBehalfOf: <userId>` to move money between that member's accounts |
 | POST | `/deposits` | admin | `{ accountId, amountCents }` |
 
 An account that is not the caller's reads as absent (404), not forbidden.
