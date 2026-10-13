@@ -5,7 +5,8 @@ import { newId, now } from './store.js'
 export const CURRENCIES = ['AUD', 'NZD', 'USD']
 export const PAGE_SIZE = 20
 
-export function openAccount(store, { ownerId, label, currency = 'AUD', actorId }) {
+/** Open an account for `ownerId` (the actor's own, by default), recorded as the actor's act. */
+export function openAccount(store, actor, { label, currency = 'AUD', ownerId = actor.id }) {
   if (!label || typeof label !== 'string') throw new HttpError(400, 'label is required')
   if (!CURRENCIES.includes(currency)) throw new HttpError(400, `currency must be one of ${CURRENCIES.join(', ')}`)
   const at = now()
@@ -19,7 +20,7 @@ export function openAccount(store, { ownerId, label, currency = 'AUD', actorId }
     createdAt: at,
     updatedAt: at,
   })
-  record(store, actorId, 'account.open', account.id)
+  record(store, actor.id, 'account.open', account.id)
   return account
 }
 

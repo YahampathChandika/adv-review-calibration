@@ -7,8 +7,8 @@ import { freshStore } from './helpers.js'
 
 async function funded(cents = 1000) {
   const ctx = await freshStore()
-  const from = openAccount(ctx.store, { ownerId: ctx.member.id, label: 'From', actorId: ctx.member.id })
-  const to = openAccount(ctx.store, { ownerId: ctx.member.id, label: 'To', actorId: ctx.member.id })
+  const from = openAccount(ctx.store, ctx.member, { label: 'From' })
+  const to = openAccount(ctx.store, ctx.member, { label: 'To' })
   deposit(ctx.store, ctx.admin, { accountId: from.id, amountCents: cents })
   return { ...ctx, from, to }
 }
@@ -35,9 +35,9 @@ test('the amount is a positive whole number, the accounts differ, and the memo i
 test('insufficient funds, a closed account, a foreign account and a currency mismatch all refuse', async () => {
   const { store, member, other, from, to } = await funded(100)
   assert.throws(() => transfer(store, member, { fromId: from.id, toId: to.id, amountCents: 101 }), /insufficient funds/)
-  const theirs = openAccount(store, { ownerId: other.id, label: 'Theirs', actorId: other.id })
+  const theirs = openAccount(store, other, { label: 'Theirs' })
   assert.throws(() => transfer(store, member, { fromId: from.id, toId: theirs.id, amountCents: 1 }), /no such account/)
-  const nzd = openAccount(store, { ownerId: member.id, label: 'NZ', currency: 'NZD', actorId: member.id })
+  const nzd = openAccount(store, member, { label: 'NZ', currency: 'NZD' })
   assert.throws(() => transfer(store, member, { fromId: from.id, toId: nzd.id, amountCents: 1 }), /share a currency/)
   store.update('accounts', to.id, { closedAt: 'now' })
   assert.throws(() => transfer(store, member, { fromId: from.id, toId: to.id, amountCents: 1 }), /closed account/)
@@ -52,7 +52,7 @@ test('exactly the balance can be sent, leaving zero', async () => {
 
 test('a deposit needs an admin\'s account to exist and open, and is recorded as the admin\'s', async () => {
   const { store, admin, member } = await freshStore()
-  const account = openAccount(store, { ownerId: member.id, label: 'A', actorId: member.id })
+  const account = openAccount(store, member, { label: 'A' })
   assert.throws(() => deposit(store, admin, { accountId: 'missing', amountCents: 1 }), /no such account/)
   deposit(store, admin, { accountId: account.id, amountCents: 5 })
   assert.equal(store.get('accounts', account.id).balanceCents, 5)
