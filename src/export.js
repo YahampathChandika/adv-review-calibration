@@ -1,6 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-import { transfersFor } from './transfers.js'
+import { allTransfersFor } from './transfers.js'
 
 const csvCell = (v) => {
   const s = String(v ?? '')
@@ -13,7 +13,7 @@ const csvCell = (v) => {
  * path outside `dir`.
  */
 export async function exportTransfers(store, account, dir) {
-  const rows = transfersFor(store, account.id)
+  const rows = allTransfersFor(store, account.id)
   const lines = ['id,fromId,toId,amountCents,memo,createdAt']
   for (const t of rows) {
     lines.push([t.id, t.fromId, t.toId, t.amountCents, t.memo, t.createdAt].map(csvCell).join(','))

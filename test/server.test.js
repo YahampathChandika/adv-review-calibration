@@ -36,8 +36,8 @@ test('open, deposit, transfer and read back, through HTTP, with only public fiel
     const bAgain = await call('GET', `/accounts/${b.body.id}`, { token: 'tok-bob' })
     assert.equal(bAgain.body.balanceCents, 200)
     const history = await call('GET', `/accounts/${a.body.id}/transfers`, { token: 'tok-bob' })
-    assert.equal(history.body.length, 1)
-    assert.equal(history.body[0].memo, 'm')
+    assert.equal(history.body.total, 1)
+    assert.equal(history.body.items[0].memo, 'm')
     // Persisted: a fresh process sees the balances.
     const raw = JSON.parse(await readFile(path.join(dir, 'ledger.json'), 'utf8'))
     assert.equal(raw.accounts.find((x) => x.id === a.body.id).balanceCents, 300)
