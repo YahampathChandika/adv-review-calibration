@@ -49,7 +49,7 @@ const routes = [
     'POST',
     /^\/accounts$/,
     requireUser(async ({ store, user, body }) => {
-      const account = openAccount(store, { ...body, ownerId: user.id, actorId: user.id })
+      const account = openAccount(store, user, { label: body.label, currency: body.currency })
       await store.save()
       return created(publicAccount(account))
     }),
