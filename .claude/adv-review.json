@@ -1,0 +1,5 @@
+{
+  "$comment": "adv-review's per-project config. No dependencies, so no install step; the ceiling is computed from the angles.",
+  "checks": "npm run check && npm test",
+  "isolate": "node --test <file>"
+}

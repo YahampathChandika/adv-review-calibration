@@ -1,0 +1,16 @@
+{
+  "name": "ledger",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A small ledger service: the fixture application for calibrating adv-review. No dependencies.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "test": "node --test",
+    "check": "node --check src/server.js && node --check src/store.js && node --check src/auth.js && node --check src/accounts.js && node --check src/transfers.js && node --check src/audit.js && node --check src/serialize.js && node --check src/export.js",
+    "start": "node src/server.js"
+  },
+  "license": "MIT"
+}
