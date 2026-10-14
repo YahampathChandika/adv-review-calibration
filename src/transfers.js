@@ -30,7 +30,9 @@ export function transfer(store, user, { fromId, toId, amountCents, memo }) {
     fromId,
     toId,
     amountCents,
+    // Both keys while copies of the previous release still read memo.
     memo: memo ?? '',
+    note: memo ?? '',
     actorId: user.id,
     createdAt: at,
   })

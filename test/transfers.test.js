@@ -67,3 +67,10 @@ test('an account\'s transfers list those in and out, newest first', async () => 
   b.createdAt = '2026-01-02T00:00:00.000Z'
   assert.deepEqual(transfersFor(store, from.id).map((t) => t.id), [b.id, a.id])
 })
+
+test('a new transfer writes its memo under both keys', async () => {
+  const { store, member, from, to } = await funded(100)
+  const row = transfer(store, member, { fromId: from.id, toId: to.id, amountCents: 1, memo: 'rent' })
+  assert.equal(store.get('transfers', row.id).memo, 'rent')
+  assert.equal(store.get('transfers', row.id).note, 'rent')
+})

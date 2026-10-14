@@ -23,7 +23,7 @@ export function publicTransfer(t) {
     fromId: t.fromId,
     toId: t.toId,
     amountCents: t.amountCents,
-    memo: t.memo,
+    memo: t.note,
     createdAt: t.createdAt,
   }
 }
