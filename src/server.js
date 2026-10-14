@@ -7,6 +7,7 @@ import { AccountCache } from './cache.js'
 import { exportTransfers } from './export.js'
 import { publicAccount, publicPage, publicTransfer } from './serialize.js'
 import { Store } from './store.js'
+import { accrueInterest } from './interest.js'
 import { deposit, transfer, transfersFor } from './transfers.js'
 import { createNotifier } from './webhooks.js'
 
@@ -157,4 +158,9 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const port = Number(process.env.PORT ?? 3000)
   const webhook = { url: process.env.LEDGER_WEBHOOK_URL, secret: process.env.LEDGER_WEBHOOK_SECRET }
   createServer(store, { webhook }).listen(port, () => console.log(`ledger on :${port}`))
+  // Interest, every hour; the job skips accounts already credited today.
+  setInterval(() => {
+    accrueInterest(store)
+    store.save().catch((err) => console.error('interest: save failed', err))
+  }, 60 * 60 * 1000).unref()
 }

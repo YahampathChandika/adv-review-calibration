@@ -46,7 +46,8 @@ An account that is not the caller's reads as absent (404), not forbidden.
 
 - **Interest.** An account earns its yearly rate, in basis points, divided by 365 each
   day, in whole cents rounded down. `scripts/run-jobs.mjs interest` accrues one day and
-  is recorded as `system`. The operator's scheduler runs it once a day.
+  is recorded as `system`. The server runs it every hour; an account already credited
+  today is skipped.
 - **Webhooks.** With `LEDGER_WEBHOOK_URL` and `LEDGER_WEBHOOK_SECRET` set, deposits,
   transfers and closed accounts are POSTed to that endpoint as signed JSON after the
   response, retried twice. See `src/webhooks.js`.
@@ -73,7 +74,6 @@ See [`docs/security.md`](docs/security.md) for the security rules and
 - There is no rate limiting.
 - One process per ledger file: ids are unique within a process, and a save rewrites
   the whole file.
-- The interest job is not safe to run twice in one day.
 
 ## About
 
