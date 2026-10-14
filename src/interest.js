@@ -5,12 +5,12 @@ export const DAYS_PER_YEAR = 365
 export const MAX_RATE_BPS = 2_000
 
 /**
- * One day's interest on a balance at a yearly rate in basis points, in whole
- * cents, rounded down. A non-positive balance or rate earns nothing.
+ * One day's interest on a balance at a yearly rate in basis points, in cents,
+ * rounded to the nearest cent. A non-positive balance or rate earns nothing.
  */
 export function dailyInterest(balanceCents, rateBps) {
   if (balanceCents <= 0 || rateBps <= 0) return 0
-  return Math.floor((balanceCents * rateBps) / 10_000 / DAYS_PER_YEAR)
+  return Math.round(((balanceCents * rateBps) / 10_000 / DAYS_PER_YEAR) * 100) / 100
 }
 
 /**
