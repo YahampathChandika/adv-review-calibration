@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url'
  */
 export const SCHEMA = {
   users: ['id', 'name', 'token', 'role', 'createdAt'],
-  accounts: ['id', 'ownerId', 'label', 'currency', 'balanceCents', 'interestRateBps', 'closedAt', 'createdAt', 'updatedAt'],
+  accounts: ['id', 'ownerId', 'label', 'currency', 'balanceCents', 'interestRateBps', 'frozenAt', 'closedAt', 'createdAt', 'updatedAt'],
   transfers: ['id', 'fromId', 'toId', 'amountCents', 'memo', 'actorId', 'createdAt'],
   audit: ['id', 'actorId', 'action', 'target', 'at'],
 }

@@ -19,6 +19,7 @@ export function transfer(store, user, { fromId, toId, amountCents, memo }) {
   if (!from || from.ownerId !== user.id) throw new HttpError(404, 'no such account')
   if (!to || to.ownerId !== user.id) throw new HttpError(404, 'no such account')
   if (from.closedAt || to.closedAt) throw new HttpError(409, 'a closed account cannot transfer')
+  if (from.frozenAt || to.frozenAt) throw new HttpError(409, 'a frozen account cannot transfer')
   if (from.currency !== to.currency) throw new HttpError(409, 'accounts must share a currency')
   if (from.balanceCents < amountCents) throw new HttpError(409, 'insufficient funds')
 

@@ -1,7 +1,15 @@
 import http from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { closeAccount, getOwnAccount, listAccounts, openAccount, setInterestRate } from './accounts.js'
+import {
+  closeAccount,
+  freezeAccount,
+  getOwnAccount,
+  listAccounts,
+  openAccount,
+  setInterestRate,
+  unfreezeAccount,
+} from './accounts.js'
 import { HttpError, requireRole, requireUser } from './auth.js'
 import { AccountCache } from './cache.js'
 import { exportTransfers } from './export.js'
@@ -97,6 +105,26 @@ const routes = [
       await store.save()
       notify('deposit.created', { accountId: account.id, amountCents: body.amountCents })
       return created(publicAccount(account))
+    }),
+  ],
+  [
+    'POST',
+    /^\/accounts\/([^/]+)\/freeze$/,
+    requireUser(async ({ store, user, params, notify }) => {
+      // Tell the card processor first: every second a lost card stays live counts.
+      notify('account.freeze-requested', { accountId: params[0], requestedBy: user.id })
+      const frozen = freezeAccount(store, user, params[0])
+      await store.save()
+      return publicAccount(frozen)
+    }),
+  ],
+  [
+    'POST',
+    /^\/accounts\/([^/]+)\/unfreeze$/,
+    requireRole('admin', async ({ store, user, params }) => {
+      const thawed = unfreezeAccount(store, user, params[0])
+      await store.save()
+      return publicAccount(thawed)
     }),
   ],
   [

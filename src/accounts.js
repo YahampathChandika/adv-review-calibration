@@ -64,3 +64,22 @@ export function setInterestRate(store, admin, { accountId, interestRateBps }) {
   record(store, admin.id, 'account.interest-rate', accountId)
   return updated
 }
+
+/** Freeze the user's own account: it takes no transfers until an administrator unfreezes it. */
+export function freezeAccount(store, user, id) {
+  const account = getOwnAccount(store, user, id)
+  if (account.frozenAt) throw new HttpError(409, 'already frozen')
+  const frozen = store.update('accounts', id, { frozenAt: now(), updatedAt: now() })
+  record(store, user.id, 'account.freeze', id)
+  return frozen
+}
+
+/** Unfreeze an account. Administrators only. */
+export function unfreezeAccount(store, admin, id) {
+  const account = store.get('accounts', id)
+  if (!account) throw new HttpError(404, 'no such account')
+  if (!account.frozenAt) throw new HttpError(409, 'not frozen')
+  const thawed = store.update('accounts', id, { frozenAt: null, updatedAt: now() })
+  record(store, admin.id, 'account.unfreeze', id)
+  return thawed
+}

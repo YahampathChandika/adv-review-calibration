@@ -34,6 +34,8 @@ unexpected failure is a 500 that says nothing about itself.
 | POST | `/accounts` | member | open an account: `{ label, currency? }` |
 | GET | `/accounts/:id` | owner | one account |
 | POST | `/accounts/:id/close` | owner | close an empty account |
+| POST | `/accounts/:id/freeze` | owner | freeze the account: no transfers until unfrozen; the card processor is told |
+| POST | `/accounts/:id/unfreeze` | admin | unfreeze it |
 | GET | `/accounts/:id/transfers` | owner | the account's transfers, newest first |
 | POST | `/accounts/:id/export` | owner | write the account's transfers as CSV under `exports/` |
 | POST | `/transfers` | owner of both | `{ fromId, toId, amountCents, memo? }` |
