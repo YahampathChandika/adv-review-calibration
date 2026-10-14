@@ -121,3 +121,24 @@ test('only an administrator sets an interest rate, and only within bounds', asyn
     await close()
   }
 })
+
+test('a transfer retried with the same idempotency key moves the money once', async () => {
+  const { dir, store } = await freshStore()
+  const { call, close } = await serve(store, dir)
+  try {
+    const a = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'A' } })
+    const b = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'B' } })
+    await call('POST', '/deposits', { token: 'tok-ada', body: { accountId: a.body.id, amountCents: 1_000 } })
+    const move = { fromId: a.body.id, toId: b.body.id, amountCents: 100 }
+    const first = await call('POST', '/transfers', { token: 'tok-bob', body: move, headers: { 'idempotency-key': 'k-1' } })
+    const again = await call('POST', '/transfers', { token: 'tok-bob', body: move, headers: { 'idempotency-key': 'k-1' } })
+    assert.equal(first.status, 201)
+    assert.equal(again.status, 201)
+    assert.deepEqual(again.body, first.body)
+    await call('POST', '/transfers', { token: 'tok-bob', body: move, headers: { 'idempotency-key': 'k-2' } })
+    await call('POST', '/transfers', { token: 'tok-bob', body: move })
+    assert.equal((await call('GET', `/accounts/${a.body.id}`, { token: 'tok-bob' })).body.balanceCents, 700)
+  } finally {
+    await close()
+  }
+})

@@ -24,11 +24,12 @@ export async function serve(store, dir, options = {}) {
   const server = createServer(store, { exportDir: path.join(dir, 'exports'), ...options })
   await new Promise((resolve) => server.listen(0, resolve))
   const base = `http://127.0.0.1:${server.address().port}`
-  const call = async (method, route, { token, body } = {}) => {
+  const call = async (method, route, { token, body, headers } = {}) => {
     const res = await fetch(base + route, {
       method,
       headers: {
         ...(token ? { authorization: `Bearer ${token}` } : {}),
+        ...(headers ?? {}),
         ...(body !== undefined ? { 'content-type': 'application/json' } : {}),
       },
       body: body !== undefined ? JSON.stringify(body) : undefined,

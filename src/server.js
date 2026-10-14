@@ -5,6 +5,7 @@ import { closeAccount, getOwnAccount, listAccounts, openAccount, setInterestRate
 import { HttpError, requireRole, requireUser } from './auth.js'
 import { AccountCache } from './cache.js'
 import { exportTransfers } from './export.js'
+import { remember, remembered } from './idempotency.js'
 import { publicAccount, publicPage, publicTransfer } from './serialize.js'
 import { Store } from './store.js'
 import { deposit, transfer, transfersFor } from './transfers.js'
@@ -82,11 +83,20 @@ const routes = [
   [
     'POST',
     /^\/transfers$/,
-    requireUser(async ({ store, user, body, notify }) => {
+    requireUser(async ({ req, store, user, body, notify }) => {
+      // A retried request with the same Idempotency-Key gets the first answer
+      // again instead of moving the money twice.
+      const key = req.headers['idempotency-key']
+      if (key) {
+        const first = remembered(store, key)
+        if (first) return new Reply(first.status, first.body)
+      }
       const row = transfer(store, user, body)
+      const response = publicTransfer(row)
+      if (key) remember(store, key, 201, response)
       await store.save()
-      notify('transfer.created', publicTransfer(row))
-      return created(publicTransfer(row))
+      notify('transfer.created', response)
+      return created(response)
     }),
   ],
   [

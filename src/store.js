@@ -12,6 +12,7 @@ export const SCHEMA = {
   accounts: ['id', 'ownerId', 'label', 'currency', 'balanceCents', 'interestRateBps', 'closedAt', 'createdAt', 'updatedAt'],
   transfers: ['id', 'fromId', 'toId', 'amountCents', 'memo', 'actorId', 'createdAt'],
   audit: ['id', 'actorId', 'action', 'target', 'at'],
+  idempotency: ['id', 'status', 'body', 'createdAt'],
 }
 
 /** Only the keys the collection stores. */
@@ -31,7 +32,7 @@ export function newId(prefix) {
 
 export const now = () => new Date().toISOString()
 
-const EMPTY = () => ({ version: 0, users: [], accounts: [], transfers: [], audit: [] })
+const EMPTY = () => ({ version: 0, users: [], accounts: [], transfers: [], audit: [], idempotency: [] })
 
 /**
  * A JSON file, held in memory and written whole on every save. Saves are

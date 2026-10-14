@@ -36,7 +36,7 @@ unexpected failure is a 500 that says nothing about itself.
 | POST | `/accounts/:id/close` | owner | close an empty account |
 | GET | `/accounts/:id/transfers` | owner | the account's transfers, newest first |
 | POST | `/accounts/:id/export` | owner | write the account's transfers as CSV under `exports/` |
-| POST | `/transfers` | owner of both | `{ fromId, toId, amountCents, memo? }` |
+| POST | `/transfers` | owner of both | `{ fromId, toId, amountCents, memo? }`; an `Idempotency-Key` header makes a retry return the first answer |
 | POST | `/deposits` | admin | `{ accountId, amountCents }` |
 | POST | `/accounts/:id/interest-rate` | admin | `{ interestRateBps }`: the yearly rate, 0 to 2,000 basis points |
 
