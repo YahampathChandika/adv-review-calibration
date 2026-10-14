@@ -59,6 +59,8 @@ See [`docs/security.md`](docs/security.md) for the security rules and
 [`docs/deploy.md`](docs/deploy.md) for rollout. In short:
 
 - Amounts are whole cents, always positive; the two sides of a transfer share a currency.
+- A transfer of $1,000 or more is screened by the fraud service first; a flagged one is
+  refused with 403.
 - A memo is at most 140 characters.
 - Every write is audited under the user who made it. A job the service runs on its own
   records `system`, never a person who did not act.

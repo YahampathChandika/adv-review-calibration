@@ -3,12 +3,17 @@ import { record } from './audit.js'
 import { newId, now } from './store.js'
 
 export const MAX_MEMO = 140
+/** Transfers of this many cents or more are screened before money moves. */
+export const SCREEN_FROM_CENTS = 100_000
+const allowAll = async () => ({ allow: true })
 
 /**
- * Move money between two of the caller's accounts. One statement: both
- * balances and the transfer row change together, or nothing does.
+ * Move money between two of the caller's accounts. Both balances and the
+ * transfer row change together, or nothing does. A transfer of
+ * SCREEN_FROM_CENTS or more is screened first; one the screen flags is refused
+ * and nothing moves.
  */
-export function transfer(store, user, { fromId, toId, amountCents, memo }) {
+export async function transfer(store, user, { fromId, toId, amountCents, memo }, { screen = allowAll } = {}) {
   if (!Number.isInteger(amountCents) || amountCents <= 0) throw new HttpError(400, 'amountCents must be a positive whole number')
   if (fromId === toId) throw new HttpError(400, 'from and to must differ')
   if (memo !== undefined && (typeof memo !== 'string' || memo.length > MAX_MEMO)) {
@@ -21,6 +26,10 @@ export function transfer(store, user, { fromId, toId, amountCents, memo }) {
   if (from.closedAt || to.closedAt) throw new HttpError(409, 'a closed account cannot transfer')
   if (from.currency !== to.currency) throw new HttpError(409, 'accounts must share a currency')
   if (from.balanceCents < amountCents) throw new HttpError(409, 'insufficient funds')
+  if (amountCents >= SCREEN_FROM_CENTS) {
+    const verdict = await screen({ userId: user.id, fromId, toId, amountCents })
+    if (!verdict.allow) throw new HttpError(403, 'transfer refused by screening')
+  }
 
   const at = now()
   store.update('accounts', fromId, { balanceCents: from.balanceCents - amountCents, updatedAt: at })
