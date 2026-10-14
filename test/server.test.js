@@ -121,3 +121,32 @@ test('only an administrator sets an interest rate, and only within bounds', asyn
     await close()
   }
 })
+
+test("an owner's account webhook receives that account's events, beside the operator's", async () => {
+  const { dir, store } = await freshStore()
+  const sent = []
+  const webhook = {
+    url: 'https://hooks.example/ledger',
+    send: async (url, init) => {
+      sent.push([url, JSON.parse(init.body).event])
+      return { ok: true }
+    },
+    delays: [],
+  }
+  const { call, close, server } = await serve(store, dir, { webhook })
+  try {
+    const a = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'A' } })
+    assert.equal((await call('POST', `/accounts/${a.body.id}/webhook`, { token: 'tok-cy', body: { url: 'https://bob.example/hook' } })).status, 404)
+    assert.equal((await call('POST', `/accounts/${a.body.id}/webhook`, { token: 'tok-bob', body: { url: 'ftp://bob.example' } })).status, 400)
+    assert.equal((await call('POST', `/accounts/${a.body.id}/webhook`, { token: 'tok-bob', body: { url: 'not a url' } })).status, 400)
+    assert.equal((await call('POST', `/accounts/${a.body.id}/webhook`, { token: 'tok-bob', body: { url: 'https://bob.example/hook' } })).status, 200)
+    await call('POST', '/deposits', { token: 'tok-ada', body: { accountId: a.body.id, amountCents: 100 } })
+    await server.notifier.idle()
+    assert.deepEqual(sent, [
+      ['https://hooks.example/ledger', 'deposit.created'],
+      ['https://bob.example/hook', 'deposit.created'],
+    ])
+  } finally {
+    await close()
+  }
+})
