@@ -121,3 +121,23 @@ test('only an administrator sets an interest rate, and only within bounds', asyn
     await close()
   }
 })
+
+test('an owner freezes an account, a frozen account moves nothing, and an administrator unfreezes it', async () => {
+  const { dir, store } = await freshStore()
+  const { call, close } = await serve(store, dir)
+  try {
+    const a = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'A' } })
+    const b = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'B' } })
+    await call('POST', '/deposits', { token: 'tok-ada', body: { accountId: a.body.id, amountCents: 100 } })
+    assert.equal((await call('POST', `/accounts/${a.body.id}/freeze`, { token: 'tok-cy' })).status, 404)
+    assert.equal((await call('POST', `/accounts/${a.body.id}/freeze`, { token: 'tok-bob' })).status, 200)
+    assert.equal((await call('POST', `/accounts/${a.body.id}/freeze`, { token: 'tok-bob' })).status, 409)
+    const move = { fromId: a.body.id, toId: b.body.id, amountCents: 10 }
+    assert.equal((await call('POST', '/transfers', { token: 'tok-bob', body: move })).status, 409)
+    assert.equal((await call('POST', `/accounts/${a.body.id}/unfreeze`, { token: 'tok-bob' })).status, 403)
+    assert.equal((await call('POST', `/accounts/${a.body.id}/unfreeze`, { token: 'tok-ada' })).status, 200)
+    assert.equal((await call('POST', '/transfers', { token: 'tok-bob', body: move })).status, 201)
+  } finally {
+    await close()
+  }
+})
