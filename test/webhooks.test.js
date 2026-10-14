@@ -70,3 +70,25 @@ test('without an endpoint nothing is sent', async () => {
   await n.idle()
   assert.equal(attempts, 0)
 })
+
+test('every attempt at one delivery carries the same delivery id; two deliveries differ', async () => {
+  const ids = []
+  let attempts = 0
+  const n = createNotifier({
+    url: URL_,
+    send: async (_url, init) => {
+      ids.push(init.headers['x-ledger-delivery'])
+      return { ok: ++attempts > 1 }
+    },
+    delays: [0, 0],
+    log: quiet,
+  })
+  n.notify('transfer.created', {})
+  await n.idle()
+  n.notify('transfer.created', {})
+  await n.idle()
+  assert.equal(ids.length, 3)
+  assert.equal(ids[0], ids[1])
+  assert.notEqual(ids[1], ids[2])
+  assert.match(ids[0], /^[0-9a-f-]{36}$/)
+})

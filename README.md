@@ -49,7 +49,8 @@ An account that is not the caller's reads as absent (404), not forbidden.
   is recorded as `system`. The operator's scheduler runs it once a day.
 - **Webhooks.** With `LEDGER_WEBHOOK_URL` and `LEDGER_WEBHOOK_SECRET` set, deposits,
   transfers and closed accounts are POSTed to that endpoint as signed JSON after the
-  response, retried twice. See `src/webhooks.js`.
+  response, retried twice. `x-ledger-delivery` is one id per event, the same on every
+  retry. See `src/webhooks.js`.
 - **Caching.** `GET /accounts/:id` reads through a short-lived cache. The store's change
   hook drops an account's entry on every write, so nothing else invalidates it.
 

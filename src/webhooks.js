@@ -1,9 +1,10 @@
-import { createHmac } from 'node:crypto'
+import { createHmac, randomUUID } from 'node:crypto'
 
 /**
  * Outgoing webhooks. The operator configures one endpoint and a shared secret
  * (`LEDGER_WEBHOOK_URL`, `LEDGER_WEBHOOK_SECRET`). Every event is POSTed there as
- * JSON with an HMAC-SHA256 of the body in `x-ledger-signature`. Delivery happens
+ * JSON with an HMAC-SHA256 of the body in `x-ledger-signature`, and a delivery id in
+ * `x-ledger-delivery` that stays the same across retries, so a receiver can de-duplicate. Delivery happens
  * after the response, so a slow or failing receiver never delays or fails a
  * request. A failed delivery is tried twice more. The secret is never logged.
  *
@@ -14,13 +15,14 @@ export function createNotifier({ url, secret = '', send = fetch, delays = [1_000
   if (!url) return { notify: () => {}, idle: async () => {} }
 
   const deliver = async (event, data) => {
+    const delivery = randomUUID()
     const body = JSON.stringify({ event, data, at: new Date().toISOString() })
     const signature = createHmac('sha256', secret).update(body).digest('hex')
     for (let attempt = 0; attempt <= delays.length; attempt++) {
       try {
         const res = await send(url, {
           method: 'POST',
-          headers: { 'content-type': 'application/json', 'x-ledger-signature': signature },
+          headers: { 'content-type': 'application/json', 'x-ledger-signature': signature, 'x-ledger-delivery': delivery },
           body,
         })
         if (res.ok) return true
