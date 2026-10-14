@@ -1,5 +1,4 @@
 import { record } from './audit.js'
-import { now } from './store.js'
 
 export const DAYS_PER_YEAR = 365
 export const MAX_RATE_BPS = 2_000
@@ -13,21 +12,29 @@ export function dailyInterest(balanceCents, rateBps) {
   return Math.floor((balanceCents * rateBps) / 10_000 / DAYS_PER_YEAR)
 }
 
+/** The bank's calendar day for an instant, as YYYY-MM-DD. */
+export const dayOf = (date) => date.toLocaleDateString('en-CA')
+
 /**
- * Accrue one day's interest on every open account that has a rate. The
- * operator's scheduler runs this once a day (`node scripts/run-jobs.mjs
- * interest`). It is not safe to run twice in one day and does not try to be.
- * Recorded as `system`: no person did it.
+ * Accrue one day's interest on every open account that has a rate and has not
+ * been credited today. Safe to run as often as you like: the server runs it
+ * every hour. Recorded as `system`: no person did it.
  */
-export function accrueInterest(store) {
-  const at = now()
+export function accrueInterest(store, { clock = () => new Date() } = {}) {
+  const at = clock().toISOString()
+  const today = dayOf(clock())
   let accounts = 0
   let cents = 0
   for (const account of store.all('accounts')) {
     if (account.closedAt) continue
+    if (account.lastAccruedOn === today) continue
     const amount = dailyInterest(account.balanceCents, account.interestRateBps ?? 0)
     if (!amount) continue
-    store.update('accounts', account.id, { balanceCents: account.balanceCents + amount, updatedAt: at })
+    store.update('accounts', account.id, {
+      balanceCents: account.balanceCents + amount,
+      lastAccruedOn: at.slice(0, 10),
+      updatedAt: at,
+    })
     record(store, 'system', 'interest', account.id)
     accounts += 1
     cents += amount

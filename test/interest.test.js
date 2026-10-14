@@ -43,3 +43,16 @@ test('a rate is a whole number of basis points within bounds, set on an open acc
   store.update('accounts', a.id, { closedAt: 'now' })
   assert.throws(() => setInterestRate(store, admin, { accountId: a.id, interestRateBps: 1 }), /already closed/)
 })
+
+test('running the job twice in a day credits each account once', async () => {
+  const { store, admin, member } = await freshStore()
+  const a = openAccount(store, { ownerId: member.id, label: 'Savings', actorId: member.id })
+  deposit(store, admin, { accountId: a.id, amountCents: 100_000 })
+  setInterestRate(store, admin, { accountId: a.id, interestRateBps: 500 })
+  const clock = () => new Date('2026-03-02T12:00:00.000Z')
+  assert.deepEqual(accrueInterest(store, { clock }), { accounts: 1, cents: 13 })
+  assert.deepEqual(accrueInterest(store, { clock }), { accounts: 0, cents: 0 })
+  assert.equal(store.get('accounts', a.id).balanceCents, 100_013)
+  const tomorrow = () => new Date('2026-03-03T12:00:00.000Z')
+  assert.deepEqual(accrueInterest(store, { clock: tomorrow }), { accounts: 1, cents: 13 })
+})
