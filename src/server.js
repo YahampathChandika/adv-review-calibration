@@ -82,8 +82,8 @@ const routes = [
   [
     'POST',
     /^\/transfers$/,
-    requireUser(async ({ store, user, body, notify }) => {
-      const row = transfer(store, user, body)
+    requireUser(async ({ store, user, body, notify, screen }) => {
+      const row = await transfer(store, user, body, { screen })
       await store.save()
       notify('transfer.created', publicTransfer(row))
       return created(publicTransfer(row))
@@ -122,9 +122,10 @@ const routes = [
 /**
  * The HTTP server over a store. `exportDir` is where CSV exports land; `webhook`
  * configures outgoing webhooks (see webhooks.js); `cacheTtlMs` how long a read of
- * one account is cached. The notifier is on `server.notifier`.
+ * one account is cached; `screen` screens large transfers (the fraud service's client).
+ * The notifier is on `server.notifier`.
  */
-export function createServer(store, { exportDir, webhook, cacheTtlMs } = {}) {
+export function createServer(store, { exportDir, webhook, cacheTtlMs, screen } = {}) {
   const dir = exportDir ?? path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'exports')
   const cache = new AccountCache(store, { ttlMs: cacheTtlMs })
   const notifier = createNotifier(webhook)
@@ -135,7 +136,7 @@ export function createServer(store, { exportDir, webhook, cacheTtlMs } = {}) {
       if (!route) throw new HttpError(404, 'no such route')
       const params = route[1].exec(url.pathname).slice(1)
       const body = req.method === 'POST' ? await readJson(req) : {}
-      const result = await route[2]({ req, store, url, params, body, exportDir: dir, cache, notify: notifier.notify })
+      const result = await route[2]({ req, store, url, params, body, exportDir: dir, cache, notify: notifier.notify, screen })
       const [status, payload] = result instanceof Reply ? [result.status, result.body] : [200, result]
       res.writeHead(status, { 'content-type': 'application/json' })
       res.end(JSON.stringify(payload))
