@@ -64,3 +64,18 @@ export function setInterestRate(store, admin, { accountId, interestRateBps }) {
   record(store, admin.id, 'account.interest-rate', accountId)
   return updated
 }
+
+/** Set the URL an account's own events are also sent to. The owner's own accounts only. */
+export function setWebhook(store, user, id, url) {
+  const account = getOwnAccount(store, user, id)
+  let parsed
+  try {
+    parsed = new URL(url)
+  } catch {
+    throw new HttpError(400, 'url must be an http or https URL')
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') throw new HttpError(400, 'url must be an http or https URL')
+  const updated = store.update('accounts', account.id, { webhookUrl: parsed.href, updatedAt: now() })
+  record(store, user.id, 'account.webhook', account.id)
+  return updated
+}

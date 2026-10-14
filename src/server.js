@@ -1,7 +1,7 @@
 import http from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { closeAccount, getOwnAccount, listAccounts, openAccount, setInterestRate } from './accounts.js'
+import { closeAccount, getOwnAccount, listAccounts, openAccount, setInterestRate, setWebhook } from './accounts.js'
 import { HttpError, requireRole, requireUser } from './auth.js'
 import { AccountCache } from './cache.js'
 import { exportTransfers } from './export.js'
@@ -67,7 +67,7 @@ const routes = [
     requireUser(async ({ store, user, params, notify }) => {
       const closed = closeAccount(store, user, params[0])
       await store.save()
-      notify('account.closed', { accountId: closed.id })
+      notify('account.closed', { accountId: closed.id }, [closed.webhookUrl])
       return publicAccount(closed)
     }),
   ],
@@ -85,7 +85,8 @@ const routes = [
     requireUser(async ({ store, user, body, notify }) => {
       const row = transfer(store, user, body)
       await store.save()
-      notify('transfer.created', publicTransfer(row))
+      const ends = [store.get('accounts', row.fromId)?.webhookUrl, store.get('accounts', row.toId)?.webhookUrl]
+      notify('transfer.created', publicTransfer(row), [...new Set(ends)])
       return created(publicTransfer(row))
     }),
   ],
@@ -95,8 +96,17 @@ const routes = [
     requireRole('admin', async ({ store, user, body, notify }) => {
       const account = deposit(store, user, body)
       await store.save()
-      notify('deposit.created', { accountId: account.id, amountCents: body.amountCents })
+      notify('deposit.created', { accountId: account.id, amountCents: body.amountCents }, [account.webhookUrl])
       return created(publicAccount(account))
+    }),
+  ],
+  [
+    'POST',
+    /^\/accounts\/([^/]+)\/webhook$/,
+    requireUser(async ({ store, user, params, body }) => {
+      const account = setWebhook(store, user, params[0], body.url)
+      await store.save()
+      return publicAccount(account)
     }),
   ],
   [
