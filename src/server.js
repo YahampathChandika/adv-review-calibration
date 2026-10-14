@@ -1,12 +1,14 @@
 import http from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { closeAccount, getOwnAccount, listAccounts, openAccount } from './accounts.js'
+import { closeAccount, getOwnAccount, listAccounts, openAccount, setInterestRate } from './accounts.js'
 import { HttpError, requireRole, requireUser } from './auth.js'
+import { AccountCache } from './cache.js'
 import { exportTransfers } from './export.js'
 import { publicAccount, publicPage, publicTransfer } from './serialize.js'
 import { Store } from './store.js'
 import { deposit, transfer, transfersFor } from './transfers.js'
+import { createNotifier } from './webhooks.js'
 
 const MAX_BODY = 64 * 1024
 
@@ -57,14 +59,15 @@ const routes = [
   [
     'GET',
     /^\/accounts\/([^/]+)$/,
-    requireUser(async ({ store, user, params }) => publicAccount(getOwnAccount(store, user, params[0]))),
+    requireUser(async ({ store, user, params, cache }) => publicAccount(getOwnAccount(store, user, params[0], cache))),
   ],
   [
     'POST',
     /^\/accounts\/([^/]+)\/close$/,
-    requireUser(async ({ store, user, params }) => {
+    requireUser(async ({ store, user, params, notify }) => {
       const closed = closeAccount(store, user, params[0])
       await store.save()
+      notify('account.closed', { accountId: closed.id })
       return publicAccount(closed)
     }),
   ],
@@ -79,19 +82,30 @@ const routes = [
   [
     'POST',
     /^\/transfers$/,
-    requireUser(async ({ store, user, body }) => {
+    requireUser(async ({ store, user, body, notify }) => {
       const row = transfer(store, user, body)
       await store.save()
+      notify('transfer.created', publicTransfer(row))
       return created(publicTransfer(row))
     }),
   ],
   [
     'POST',
     /^\/deposits$/,
-    requireRole('admin', async ({ store, user, body }) => {
+    requireRole('admin', async ({ store, user, body, notify }) => {
       const account = deposit(store, user, body)
       await store.save()
+      notify('deposit.created', { accountId: account.id, amountCents: body.amountCents })
       return created(publicAccount(account))
+    }),
+  ],
+  [
+    'POST',
+    /^\/accounts\/([^/]+)\/interest-rate$/,
+    requireRole('admin', async ({ store, user, params, body }) => {
+      const account = setInterestRate(store, user, { accountId: params[0], interestRateBps: body.interestRateBps })
+      await store.save()
+      return publicAccount(account)
     }),
   ],
   [
@@ -105,17 +119,23 @@ const routes = [
   ],
 ]
 
-/** The HTTP server over a store. `exportDir` is where CSV exports land. */
-export function createServer(store, { exportDir } = {}) {
+/**
+ * The HTTP server over a store. `exportDir` is where CSV exports land; `webhook`
+ * configures outgoing webhooks (see webhooks.js); `cacheTtlMs` how long a read of
+ * one account is cached. The notifier is on `server.notifier`.
+ */
+export function createServer(store, { exportDir, webhook, cacheTtlMs } = {}) {
   const dir = exportDir ?? path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'exports')
-  return http.createServer(async (req, res) => {
+  const cache = new AccountCache(store, { ttlMs: cacheTtlMs })
+  const notifier = createNotifier(webhook)
+  const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://localhost')
     const route = routes.find(([method, pattern]) => method === req.method && pattern.test(url.pathname))
     try {
       if (!route) throw new HttpError(404, 'no such route')
       const params = route[1].exec(url.pathname).slice(1)
       const body = req.method === 'POST' ? await readJson(req) : {}
-      const result = await route[2]({ req, store, url, params, body, exportDir: dir })
+      const result = await route[2]({ req, store, url, params, body, exportDir: dir, cache, notify: notifier.notify })
       const [status, payload] = result instanceof Reply ? [result.status, result.body] : [200, result]
       res.writeHead(status, { 'content-type': 'application/json' })
       res.end(JSON.stringify(payload))
@@ -126,6 +146,8 @@ export function createServer(store, { exportDir } = {}) {
       res.end(JSON.stringify({ error: status === 500 ? 'internal error' : err.message }))
     }
   })
+  server.notifier = notifier
+  return server
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -133,5 +155,6 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const store = await Store.open(file)
   await store.migrate(path.join(path.dirname(fileURLToPath(import.meta.url)), 'migrations'))
   const port = Number(process.env.PORT ?? 3000)
-  createServer(store).listen(port, () => console.log(`ledger on :${port}`))
+  const webhook = { url: process.env.LEDGER_WEBHOOK_URL, secret: process.env.LEDGER_WEBHOOK_SECRET }
+  createServer(store, { webhook }).listen(port, () => console.log(`ledger on :${port}`))
 }

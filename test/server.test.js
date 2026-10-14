@@ -75,3 +75,49 @@ test('an export lands under the export directory, named for the account only', a
     await close()
   }
 })
+
+test('a read after a write shows the write, and events go to the configured webhook', async () => {
+  const { dir, store } = await freshStore()
+  const sent = []
+  const webhook = {
+    url: 'https://hooks.example/ledger',
+    secret: 'k',
+    send: async (_url, init) => {
+      sent.push(JSON.parse(init.body).event)
+      return { ok: true }
+    },
+    delays: [],
+  }
+  const { call, close, server } = await serve(store, dir, { webhook })
+  try {
+    const a = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'A' } })
+    const b = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'B' } })
+    const c = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'C' } })
+    assert.equal((await call('GET', `/accounts/${a.body.id}`, { token: 'tok-bob' })).body.balanceCents, 0)
+    await call('POST', '/deposits', { token: 'tok-ada', body: { accountId: a.body.id, amountCents: 300 } })
+    assert.equal((await call('GET', `/accounts/${a.body.id}`, { token: 'tok-bob' })).body.balanceCents, 300)
+    await call('POST', '/transfers', { token: 'tok-bob', body: { fromId: a.body.id, toId: b.body.id, amountCents: 100 } })
+    assert.equal((await call('GET', `/accounts/${a.body.id}`, { token: 'tok-bob' })).body.balanceCents, 200)
+    assert.equal((await call('POST', `/accounts/${c.body.id}/close`, { token: 'tok-bob' })).status, 200)
+    assert.equal((await call('GET', `/accounts/${c.body.id}`, { token: 'tok-bob' })).body.closed, true)
+    await server.notifier.idle()
+    assert.deepEqual(sent, ['deposit.created', 'transfer.created', 'account.closed'])
+  } finally {
+    await close()
+  }
+})
+
+test('only an administrator sets an interest rate, and only within bounds', async () => {
+  const { dir, store } = await freshStore()
+  const { call, close } = await serve(store, dir)
+  try {
+    const a = await call('POST', '/accounts', { token: 'tok-bob', body: { label: 'A' } })
+    const route = `/accounts/${a.body.id}/interest-rate`
+    assert.equal((await call('POST', route, { token: 'tok-bob', body: { interestRateBps: 500 } })).status, 403)
+    assert.equal((await call('POST', route, { token: 'tok-ada', body: { interestRateBps: 99_999 } })).status, 400)
+    assert.equal((await call('POST', route, { token: 'tok-ada', body: { interestRateBps: 500 } })).status, 200)
+    assert.equal(store.get('accounts', a.body.id).interestRateBps, 500)
+  } finally {
+    await close()
+  }
+})

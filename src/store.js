@@ -9,7 +9,7 @@ import { pathToFileURL } from 'node:url'
  */
 export const SCHEMA = {
   users: ['id', 'name', 'token', 'role', 'createdAt'],
-  accounts: ['id', 'ownerId', 'label', 'currency', 'balanceCents', 'closedAt', 'createdAt', 'updatedAt'],
+  accounts: ['id', 'ownerId', 'label', 'currency', 'balanceCents', 'interestRateBps', 'closedAt', 'createdAt', 'updatedAt'],
   transfers: ['id', 'fromId', 'toId', 'amountCents', 'memo', 'actorId', 'createdAt'],
   audit: ['id', 'actorId', 'action', 'target', 'at'],
 }
@@ -42,6 +42,12 @@ export class Store {
   constructor(file) {
     this.file = file
     this.data = EMPTY()
+    this.listeners = []
+  }
+
+  /** Call `fn(collection, row)` after every insert and update, with the stored row. */
+  onChange(fn) {
+    this.listeners.push(fn)
   }
 
   static async open(file) {
@@ -78,6 +84,7 @@ export class Store {
   insert(collection, row) {
     const stored = pick(collection, row)
     this.all(collection).push(stored)
+    for (const fn of this.listeners) fn(collection, stored)
     return stored
   }
 
@@ -86,6 +93,7 @@ export class Store {
     const index = rows.findIndex((row) => row.id === id)
     if (index < 0) throw new Error(`${collection}: no row ${id}`)
     rows[index] = pick(collection, { ...rows[index], ...patch })
+    for (const fn of this.listeners) fn(collection, rows[index])
     return rows[index]
   }
 

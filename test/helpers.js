@@ -19,9 +19,9 @@ export async function freshStore() {
   return { dir, store, admin, member, other }
 }
 
-/** The server on a free port, with a `call` helper that speaks JSON. */
-export async function serve(store, dir) {
-  const server = createServer(store, { exportDir: path.join(dir, 'exports') })
+/** The server on a free port, with a `call` helper that speaks JSON. `options` go to createServer. */
+export async function serve(store, dir, options = {}) {
+  const server = createServer(store, { exportDir: path.join(dir, 'exports'), ...options })
   await new Promise((resolve) => server.listen(0, resolve))
   const base = `http://127.0.0.1:${server.address().port}`
   const call = async (method, route, { token, body } = {}) => {
@@ -36,5 +36,5 @@ export async function serve(store, dir) {
     return { status: res.status, body: await res.json() }
   }
   const close = () => new Promise((resolve) => server.close(resolve))
-  return { base, call, close }
+  return { base, call, close, server }
 }
