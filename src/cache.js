@@ -25,3 +25,32 @@ export class AccountCache {
     return row
   }
 }
+
+/**
+ * One owner's account-list pages, for `GET /accounts`, kept for `ttlMs`. A
+ * transfer or deposit changes balances, so they call `forget(ownerId)` for each
+ * owner whose list they change.
+ */
+export class ListCache {
+  constructor({ ttlMs = 30_000, clock = Date.now } = {}) {
+    this.ttlMs = ttlMs
+    this.clock = clock
+    this.entries = new Map()
+  }
+
+  get(ownerId, page, load) {
+    const key = `${ownerId}:${page}`
+    const hit = this.entries.get(key)
+    if (hit && this.clock() - hit.at < this.ttlMs) return hit.value
+    const value = load()
+    this.entries.set(key, { value, at: this.clock() })
+    return value
+  }
+
+  forget(ownerId) {
+    for (const key of this.entries.keys()) if (key.startsWith(`${ownerId}:`)) this.entries.delete(key)
+  }
+}
+
+/** The process's account-list cache. */
+export const listCache = new ListCache()

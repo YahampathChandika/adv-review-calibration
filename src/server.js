@@ -3,7 +3,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { closeAccount, getOwnAccount, listAccounts, openAccount, setInterestRate } from './accounts.js'
 import { HttpError, requireRole, requireUser } from './auth.js'
-import { AccountCache } from './cache.js'
+import { AccountCache, listCache } from './cache.js'
 import { exportTransfers } from './export.js'
 import { publicAccount, publicPage, publicTransfer } from './serialize.js'
 import { Store } from './store.js'
@@ -44,7 +44,7 @@ const routes = [
     /^\/accounts$/,
     requireUser(async ({ store, user, url }) => {
       const page = url.searchParams.has('page') ? Number(url.searchParams.get('page')) : 1
-      return publicPage(listAccounts(store, { ownerId: user.id, page }), publicAccount)
+      return listCache.get(user.id, page, () => publicPage(listAccounts(store, { ownerId: user.id, page }), publicAccount))
     }),
   ],
   [

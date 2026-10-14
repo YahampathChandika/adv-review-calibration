@@ -1,5 +1,6 @@
 import { HttpError } from './auth.js'
 import { record } from './audit.js'
+import { listCache } from './cache.js'
 import { newId, now } from './store.js'
 
 export const MAX_MEMO = 140
@@ -35,6 +36,8 @@ export function transfer(store, user, { fromId, toId, amountCents, memo }) {
     createdAt: at,
   })
   record(store, user.id, 'transfer', row.id)
+  listCache.forget(from.ownerId)
+  listCache.forget(to.ownerId)
   return row
 }
 
@@ -49,6 +52,7 @@ export function deposit(store, admin, { accountId, amountCents }) {
     updatedAt: now(),
   })
   record(store, admin.id, 'deposit', accountId)
+  listCache.forget(account.ownerId)
   return updated
 }
 
