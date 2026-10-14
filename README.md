@@ -32,7 +32,7 @@ unexpected failure is a 500 that says nothing about itself.
 | GET | `/health` | anyone | `{ ok: true }` |
 | GET | `/accounts` | member | the caller's accounts, newest first, 20 a page (`?page=`) |
 | POST | `/accounts` | member | open an account: `{ label, currency? }` |
-| GET | `/accounts/:id` | owner | one account |
+| GET | `/accounts/:id` | owner | one account, with its interest rate |
 | POST | `/accounts/:id/close` | owner | close an empty account |
 | GET | `/accounts/:id/transfers` | owner | the account's transfers, newest first |
 | POST | `/accounts/:id/export` | owner | write the account's transfers as CSV under `exports/` |
