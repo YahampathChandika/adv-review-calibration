@@ -6,8 +6,8 @@ import { DAYS_PER_YEAR, MAX_RATE_BPS, accrueInterest, dailyInterest } from '../s
 import { deposit } from '../src/transfers.js'
 import { freshStore } from './helpers.js'
 
-test('a day of interest is whole cents, rounded down; an empty account or no rate earns nothing', () => {
-  assert.equal(dailyInterest(100_000, 500), 13, '$1,000 at 5% earns 13.69 cents a day')
+test('a day of interest is rounded to the nearest cent; an empty account or no rate earns nothing', () => {
+  assert.equal(dailyInterest(100_000, 500), 13.7, '$1,000 at 5% earns 13.70 cents a day')
   assert.equal(dailyInterest(DAYS_PER_YEAR * 10_000, 10_000), 10_000)
   assert.equal(dailyInterest(0, 500), 0)
   assert.equal(dailyInterest(-5, 500), 0)
@@ -23,8 +23,8 @@ test('accrual credits open accounts with a rate, skips the rest, and is recorded
   deposit(store, admin, { accountId: flat.id, amountCents: 100_000 })
   setInterestRate(store, admin, { accountId: earning.id, interestRateBps: 500 })
   store.update('accounts', closed.id, { interestRateBps: 500, closedAt: 'now' })
-  assert.deepEqual(accrueInterest(store), { accounts: 1, cents: 13 })
-  assert.equal(store.get('accounts', earning.id).balanceCents, 100_013)
+  assert.deepEqual(accrueInterest(store), { accounts: 1, cents: 13.7 })
+  assert.equal(store.get('accounts', earning.id).balanceCents, 100_013.7)
   assert.equal(store.get('accounts', flat.id).balanceCents, 100_000)
   const last = entriesFor(store, earning.id).at(-1)
   assert.deepEqual([last.actorId, last.action], ['system', 'interest'])

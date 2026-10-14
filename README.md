@@ -45,7 +45,7 @@ An account that is not the caller's reads as absent (404), not forbidden.
 ## Interest, webhooks and caching
 
 - **Interest.** An account earns its yearly rate, in basis points, divided by 365 each
-  day, in whole cents rounded down. `scripts/run-jobs.mjs interest` accrues one day and
+  day, rounded to the nearest cent. `scripts/run-jobs.mjs interest` accrues one day and
   is recorded as `system`. The operator's scheduler runs it once a day.
 - **Webhooks.** With `LEDGER_WEBHOOK_URL` and `LEDGER_WEBHOOK_SECRET` set, deposits,
   transfers and closed accounts are POSTed to that endpoint as signed JSON after the
